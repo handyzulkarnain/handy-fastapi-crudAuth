@@ -1,8 +1,10 @@
-# Nama  : Handy Zulkarnain
-# NIM   : 18219060
+# Nama      : Handy Zulkarnain
+# NIM       : 18219060
+# Tanggal   : 16 Oktober 2021
 
 ############ IMPORTS AND INITIAL CONFIGURE ############
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import json
 
 from fastapi.exceptions import HTTPException
@@ -48,6 +50,31 @@ def decodeJWT(token: str) -> dict:
         return {}
 
 
+############ AUTHORIZATION ############
+class BearerToken(HTTPBearer):
+    def __init__(self, auto_error: bool = True):
+        super(BearerToken, self).__init__(auto_error=auto_error)
+    
+    async def __call__(self, request: Request):
+        authCredentials: HTTPAuthorizationCredentials = await super(BearerToken, self).__call__(request)
+        if (authCredentials):
+            if not (self.verifyJWT(authCredentials.credentials)):
+                raise HTTPException(status_code=403, detail="Token is Invalid or Expired!")
+            return authCredentials.credentials
+        else:
+            raise HTTPException(status_code=403, detail="Unable to Authorize: No Credentials Provided!")
+
+    def verifyJWT(self, tokenJWT: str) -> bool:
+        tokenIsValid: bool = False
+        try:
+            body = decodeJWT(tokenJWT)
+        except:
+            body = None
+        if (body):
+            tokenIsValid = True
+        return tokenIsValid
+
+
 ############ HANDLE USERS ############
 def check_user(username: str):
     for user in data_users['users']:
@@ -91,11 +118,11 @@ def create_user(username: str, password: str):
 def root():
     return "Anda sedang berada di halaman awal. Silahkan tambahkan /docs pada akhir url."
 
-@app.get("/menu")
+@app.get("/menu", dependencies=[Depends(BearerToken())])
 def read_all_menu():
     return data['menu']
 
-@app.get("/menu/{item_id}")
+@app.get("/menu/{item_id}", dependencies=[Depends(BearerToken())])
 def read_menu(item_id: int):
     for item_menu in data['menu']:
         if (item_menu['id'] == item_id):
@@ -104,7 +131,7 @@ def read_menu(item_id: int):
         status_code=404, detail="Item menu not found!"
     )
 
-@app.post("/menu")
+@app.post("/menu", dependencies=[Depends(BearerToken())])
 def create_menu(name: str):
     id = 1
     if (len(data['menu']) > 0):
@@ -119,7 +146,7 @@ def create_menu(name: str):
     write_file.close()
     return new_data
 
-@app.delete('/menu/{item_id}')
+@app.delete("/menu/{item_id}", dependencies=[Depends(BearerToken())])
 def delete_menu(item_id: int):
     index = 0
     for item_menu in data['menu']:
@@ -135,7 +162,7 @@ def delete_menu(item_id: int):
         status_code=404, detail="Item menu not found!"
     )
 
-@app.put("/menu/{item_id}")
+@app.put("/menu/{item_id}", dependencies=[Depends(BearerToken())])
 def update_menu(item_id: int, item_name):
     for item_menu in data['menu']:
         if (item_menu['id'] == item_id):
@@ -148,3 +175,4 @@ def update_menu(item_id: int, item_name):
     raise HTTPException(
         status_code=404, detail="Item menu not found!"
     )
+############ END OF FILE ############
