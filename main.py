@@ -19,12 +19,15 @@ with open("menu.json", "r") as read_file:
 with open("users.json", "r") as read_users_file:
     data_users = json.load(read_users_file)
 
-app = FastAPI()
+app = FastAPI(title="Handy's FastAPI")
 
 
 ############ AUTHENTICATIONS ############
-JWT_SECRET = config("secret")
-JWT_ALGORITHM = config("algorithm")
+secret="b'88d875cda190f0688a829d52dc0911c3a316537205f39f63'"
+algorithm="HS256"
+
+JWT_SECRET = secret
+JWT_ALGORITHM = algorithm
 
 def res_access_token(token: str):
     return {
@@ -89,7 +92,7 @@ def check_password(password: str):
     return False
 
 @app.post("/user/login")
-def login_user(username: str, password: str):
+async def login_user(username: str, password: str):
     for user in data_users['users']:
         if (check_user(username)) and (check_password(password)):
             return createJWT(user['username'])
@@ -98,7 +101,7 @@ def login_user(username: str, password: str):
     )
 
 @app.post("/user/register")
-def create_user(username: str, password: str):
+async def create_user(username: str, password: str):
     if check_user(username):
         raise HTTPException(
             status_code=500, detail="Username has taken! Please proceed to login!"
@@ -115,15 +118,15 @@ def create_user(username: str, password: str):
 
 ############ CRUD OPERATIONS ############
 @app.get("/")
-def root():
+async def root():
     return "Anda sedang berada di halaman awal. Silahkan tambahkan /docs pada akhir url."
 
 @app.get("/menu", dependencies=[Depends(BearerToken())])
-def read_all_menu():
+async def read_all_menu():
     return data['menu']
 
 @app.get("/menu/{item_id}", dependencies=[Depends(BearerToken())])
-def read_menu(item_id: int):
+async def read_menu(item_id: int):
     for item_menu in data['menu']:
         if (item_menu['id'] == item_id):
             return item_menu
@@ -132,7 +135,7 @@ def read_menu(item_id: int):
     )
 
 @app.post("/menu", dependencies=[Depends(BearerToken())])
-def create_menu(name: str):
+async def create_menu(name: str):
     id = 1
     if (len(data['menu']) > 0):
         # biar efisien kita perlu langsung nambahin ke element terakhir aja
@@ -147,7 +150,7 @@ def create_menu(name: str):
     return new_data
 
 @app.delete("/menu/{item_id}", dependencies=[Depends(BearerToken())])
-def delete_menu(item_id: int):
+async def delete_menu(item_id: int):
     index = 0
     for item_menu in data['menu']:
         index+=1
@@ -163,7 +166,7 @@ def delete_menu(item_id: int):
     )
 
 @app.put("/menu/{item_id}", dependencies=[Depends(BearerToken())])
-def update_menu(item_id: int, item_name):
+async def update_menu(item_id: int, item_name):
     for item_menu in data['menu']:
         if (item_menu['id'] == item_id):
             item_menu['name'] = item_name
