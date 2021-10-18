@@ -12,7 +12,6 @@ from fastapi.exceptions import HTTPException
 import time
 from typing import Dict
 import jwt
-from decouple import config
 
 with open("menu.json", "r") as read_file:
     data = json.load(read_file)
@@ -23,11 +22,8 @@ app = FastAPI(title="Handy's FastAPI")
 
 
 ############ AUTHENTICATIONS ############
-secret="b'88d875cda190f0688a829d52dc0911c3a316537205f39f63'"
-algorithm="HS256"
-
-JWT_SECRET = secret
-JWT_ALGORITHM = algorithm
+SECRET="b'88d875cda190f0688a829d52dc0911c3a316537205f39f63'"
+ALGORITHM="HS256"
 
 def res_access_token(token: str):
     return {
@@ -39,12 +35,12 @@ def createJWT(user_id: str) -> Dict[str, str]:
         "user_id": user_id,
         "expiry_time": time.time() + 1200
     }
-    token = jwt.encode(body, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    token = jwt.encode(body, SECRET, algorithm=ALGORITHM)
     return res_access_token(token)
 
 def decodeJWT(token: str) -> dict:
     try:
-        decoded_token = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        decoded_token = jwt.decode(token, SECRET, algorithms=[ALGORITHM])
         if (decoded_token["expiry_time"] >= time.time()):
             return decoded_token
         else:
@@ -99,21 +95,6 @@ async def login_user(username: str, password: str):
     raise HTTPException (
         status_code=500, detail="Wrong credentials!"
     )
-
-@app.post("/user/register")
-async def create_user(username: str, password: str):
-    if check_user(username):
-        raise HTTPException(
-            status_code=500, detail="Username has taken! Please proceed to login!"
-        )
-    else: 
-        new_data = {"username":username, "password":password}
-        data_users['users'].append(dict(new_data))
-        read_users_file.close()
-        with open("users.json", "w") as write_file:
-            json.dump(data_users, write_file, indent=4)
-        write_file.close()
-        return createJWT(new_data['username'])
 
 
 ############ CRUD OPERATIONS ############
